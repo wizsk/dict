@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morphology :?</title>
+    <style>
+        .px {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+    </style>
+</head>
+
+<body style="font-size: 2rem;">
+    <form action="/" method="get">
+        <input value="{{.Word}}" name="w" id="w" type="text" placeholder="ابحث"
+            style="direction: rtl; text-align: right; font-size: inherit;" autofocus>
+        <button form="w" style="font-size: inherit;">Search</button>
+    </form>
+
+    <main>
+        <table>
+            <thead>
+                <td class="px">Def</td>
+                <td class="px">Word</td>
+                <td class="px">Root</td>
+            </thead>
+            {{ range .Entries}}
+            <tr>
+                <td class="px">{{.Word}}</td>
+                <td class="px">{{.Def}}</td>
+                <td class="px">{{.Root}}</td>
+            </tr>
+            {{else}}
+            <tr>
+                <td class="px">Nothing found</td>
+            </tr>
+            {{end}}
+        </table>
+    </main>
+</body>
+
+</html>

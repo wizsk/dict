@@ -1,4 +1,4 @@
-package main
+package dict
 
 var harakaats = []rune{'a', 'u', 'i', 'F', 'N', 'K', '~', 'o'}
 
