@@ -38,7 +38,6 @@ func (d *dictionary) findWord(word string) []Entry {
 
 	for i := 0; i < len(w); i++ {
 		for j := i + 1; j <= len(w); j++ {
-			// fmt.Println(rSlice(w, 0, i), rSlice(w, i, j), rSlice(w, j, len(w)))
 			c := d.dict(rSlice(w, 0, i), rSlice(w, i, j), rSlice(w, j, len(w)))
 			res = append(res, c...)
 		}
@@ -48,25 +47,29 @@ func (d *dictionary) findWord(word string) []Entry {
 
 func rSlice(r []rune, start, end int) string {
 	return string(r[start:end])
-
 }
-func bracketify(word string, space int) string {
-	if word != "" && word[0] != '[' {
-		if space == 1 {
-			return " [" + word + "]"
-		} else if space == 2 {
-			return "[" + word + "] "
-		} else {
-			return "[" + word + "]"
+
+func fomatDef(pre, stem, suf Entry) string {
+	res := ""
+	if pre.Def != "" {
+		seg := strings.Split(pre.Def, "<pos>")
+		if len(seg) > 1 {
+			res += "[" + strings.TrimSpace(seg[0]) + "] "
 		}
-	} else {
-		return ""
+		fmt.Println("aita ki prefix?", pre.Def)
 	}
-}
 
-func formatSuffix(s string) string {
-	p := strings.Split(s, "<pos>")
-	return strings.TrimSpace(p[0])
+	if suf.Def != "" {
+		seg := strings.Split(suf.Def, "<pos>")
+		t := strings.ReplaceAll(seg[0], "<verb>", "")
+		t = strings.TrimSpace(t)
+		t = strings.TrimSpace(t)
+		res += "[" + t + "] "
+		// fmt.Println("aita ki suffix?", suf.Def)
+	}
+
+	res += strings.ReplaceAll(stem.Def, ";", ", ")
+	return res
 }
 
 func (d *dictionary) dict(pref, stem, suff string) []Entry {
@@ -86,19 +89,11 @@ func (d *dictionary) dict(pref, stem, suff string) []Entry {
 				c := Entry{
 					Root: deTransliterate(s.Root),
 					Word: deTransliterate(p.Word + s.Word + su.Word),
-					Def:  bracketify(p.Def, 2) + s.Def + bracketify(su.Def, 1),
-					Fam:  s.Fam,
+					Def: fomatDef(p, s, su),
+					Fam: s.Fam,
 				}
-				fmt.Println("?", formatSuffix(p.Def), formatSuffix(su.Def), s.Def)
+
 				res = append(res, c)
-				// fmt.Printf("root: %s, word: %s, def: %s, pos: %s, fam: %s, morpth: %s\n",
-				// 	deTransliterate(s.Root),
-				// 	deTransliterate(p.Word+s.Word+su.Word),
-				// 	strings.Join([]string{p.Def, s.Def, su.Def}, "|"),
-				// 	strings.Join([]string{p.Pos, s.Pos, su.Pos}, ", "),
-				// 	s.Fam,
-				// 	strings.Join([]string{p.Morph, s.Morph, su.Morph}, ", "),
-				// )
 			}
 		}
 	}
@@ -207,7 +202,16 @@ func main() {
 	dict.tableAC = parseTable(filepath.Join(dataRoot, tables[1]))
 	dict.tableBC = parseTable(filepath.Join(dataRoot, tables[2]))
 
-	for _, e := range dict.findWord(os.Args[1]) {
-		fmt.Println(e)
+	in := bufio.NewScanner(os.Stdin)
+	for in.Scan() {
+		f := p(os.Create("/tmp/out.txt"))
+		w := strings.TrimSpace(in.Text())
+		for i, e := range dict.findWord(w) {
+			fmt.Printf("\t%d: w: %s d:%s r: %s\n", i+1, e.Word, e.Def, e.Root)
+			fmt.Fprintf(f, "%d: w: %s d:%s r: %s\n", i+1, e.Word, e.Def, e.Root)
+			// fmt.Fprintln(f, e)
+		}
+		fmt.Println()
+		p[any](nil, f.Close())
 	}
 }
