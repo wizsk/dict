@@ -4,42 +4,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dict by me</title>
+    <title>Arabic Dictionary</title>
     <style>
         .px {
             padding-left: 1rem;
             padding-right: 1rem;
         }
+
+        body {
+            font-size: 2rem;
+            font-family: sarif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #w {
+            direction: rtl;
+            text-align: right;
+            font-size: inherit;
+            font-family: inherit;
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+        }
+
+        button {
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+        }
+
+        main {
+            margin-top: 1rem;
+        }
     </style>
+
 </head>
 
-<body style="font-size: 2rem;">
-    <form action="/" method="get">
-        <input value="{{.Word}}" name="w" id="w" type="text" placeholder="ابحث"
-            style="direction: rtl; text-align: right; font-size: inherit;" autofocus>
-        <button form="w" style="font-size: inherit;">Search</button>
+<body>
+    <form autocomplete="off" action="/" method="get">
+        <button type="submit" style="font-size: inherit; font-family: inherit;">Search</button>
+        <input value="{{.Word}}" name="w" id="w" type="text" placeholder="ابحث" {{if not .Word}}autofocus{{end}}>
     </form>
 
     <main>
+        {{if .Entries}}
         <table>
             <thead>
                 <td class="px">Def</td>
                 <td class="px">Word</td>
                 <td class="px">Root</td>
             </thead>
-            {{ range .Entries}}
+            {{range .Entries}}
             <tr>
                 <td class="px">{{.Word}}</td>
                 <td class="px">{{.Def}}</td>
                 <td class="px">{{.Root}}</td>
             </tr>
-            {{else}}
-            <tr>
-                <td class="px">Nothing found</td>
-            </tr>
             {{end}}
         </table>
+        {{else if .Word}}
+        No resusts for: "{{.Word}}"
+        {{else}}
+        Search for something
+        {{end}}
     </main>
+
+    <script>
+        // ----------- keyboard shoutcuts ----------
+        document.addEventListener('keydown', (e) => {
+            const input = w;
+            if (document.activeElement === input) {
+                if (e.code === "Escape") input.blur();
+                return;
+            }
+
+
+            // no composite key
+            if (/*e.shiftKey ||*/ e.ctrlKey) {
+                return;
+            }
+
+            switch (e.code) {
+                case "KeyS":
+                    e.preventDefault();
+                    input.focus();
+                    input.setSelectionRange(input.value.length, input.value.length);
+                    break;
+                case "KeyI":
+                    e.preventDefault();
+                    input.focus();
+                    input.select();
+                    break;
+
+            }
+        })
+    </script>
 </body>
 
 </html>
