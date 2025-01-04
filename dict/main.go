@@ -72,7 +72,7 @@ func (d *Dictionary) dict(pref, stem, suff string) []Entry {
 				c := Entry{
 					Root: deTransliterate(s.Root),
 					Word: deTransliterate(p.Word + s.Word + su.Word),
-					Def:  fomatDef(p, s, su),
+					Def:  formatDef(p, s, su),
 					Fam:  s.Fam,
 				}
 
@@ -90,26 +90,32 @@ func (d *Dictionary) obeysGrammer(pref, stem, suff string) bool {
 
 }
 
-func fomatDef(pre, stem, suf Entry) string {
+func formatDef(pre, stem, suf Entry) string {
 	res := ""
 	if pre.Def != "" {
 		seg := strings.Split(pre.Def, "<pos>")
 		res += "[" + strings.TrimSpace(seg[0]) + "] "
 	}
 
+	if stem.Def != "" {
+		stem.Def = strings.TrimSpace(strings.Split(stem.Def, "<pos>")[0])
+		stem.Def = strings.ReplaceAll(stem.Def, ";", ", ")
+	}
+
 	if suf.Def != "" {
-		seg := strings.Split(suf.Def, "<pos>")
-		t := strings.ReplaceAll(seg[0], "<verb>", "")
-		t = strings.TrimSpace(t)
-		t = strings.TrimSpace(t)
-		res += "[" + t + "] "
+		suf.Def = strings.TrimSpace(strings.Split(suf.Def, "<pos>")[0])
+		if strings.Contains(suf.Def, "<verb>") {
+			parts := strings.Split(suf.Def, "<verb>")
+			res += "[" + strings.TrimSpace(parts[0]) + "] " + stem.Def
+			if len(parts) > 1 && strings.TrimSpace(parts[1]) != "" {
+				res += " [" + strings.TrimSpace(parts[1]) + "]"
+			}
+		} else {
+			res += stem.Def + " [" + suf.Def + "] "
+		}
+	} else {
+		res += stem.Def
 	}
-
-	if strings.Contains(stem.Def, "<pos>") {
-		stem.Def = strings.Split(stem.Def, "<pos>")[0]
-	}
-	res += strings.ReplaceAll(stem.Def, ";", ", ")
-
 	return res
 }
 
