@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -15,8 +16,8 @@ import (
 
 const debug = !true
 
-//go:embed index.html
-var indexPage embed.FS
+//go:embed pub/*
+var staticData embed.FS
 
 type Data struct {
 	Word    string
@@ -28,11 +29,11 @@ func main() {
 		fmt.Println("---- running in debug mode ----")
 	}
 	dict := dict.MakeData()
-	tmpl := p(template.ParseFS(indexPage, "index.html"))
+	tmpl := p(template.ParseFS(staticData, "pub/main.html"))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if debug {
-			tmpl = p(template.ParseFiles("index.html"))
+			tmpl = p(template.ParseFiles("pub/main.html"))
 		}
 		d := Data{Word: strings.TrimSpace(r.FormValue("w"))}
 		d.Entries = dict.FindWord(d.Word)
@@ -41,8 +42,10 @@ func main() {
 		}
 	})
 
+	http.Handle("/pub/", http.FileServerFS(staticData))
+
 	p := ":" + findFreePort()
-	fmt.Println("listening at: http://localhost" + p)
+	fmt.Println("serving at: http://" + localIp() + p)
 	panic(http.ListenAndServe(p, nil))
 }
 
@@ -71,4 +74,23 @@ func findFreePort() string {
 		from, to)
 	os.Exit(1)
 	return ""
+}
+
+func localIp() string {
+	if runtime.GOOS == "windows" {
+		return "localhost"
+	}
+
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "localhost"
+	}
+
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
+			return ipNet.IP.String()
+		}
+	}
+	return "localhost"
 }

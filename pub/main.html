@@ -4,37 +4,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arabic Dictionary</title>
+    <!-- <link href="/pub/amiri.css" rel="stylesheet"> -->
+    <link rel="shortcut icon" href="/pub/fav.png" type="image/x-icon">
+    <title>{{if not .Word}}Arabic Dictionary{{else}}Searched: {{.Word}}{{end}}</title>
+
     <style>
-        .px {
-            padding-left: 1rem;
-            padding-right: 1rem;
+        @font-face {
+            font-family: "Amiri";
+            src: url("/pub/Amiri-Regular.ttf") format("truetype");
+            font-weight: normal;
+            font-style: normal;
         }
 
         body {
-            font-size: 2rem;
+            font-family: inter;
+            font-size: 1.2rem;
             font-family: sarif;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
+        .px {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        form {
+            margin-top: 2rem;
+        }
+
         #w {
+            font-family: "Amiri";
             direction: rtl;
             text-align: right;
             font-size: inherit;
-            font-family: inherit;
+            max-width: 60vw;
             padding-top: .5rem;
             padding-bottom: .5rem;
         }
 
         button {
+            font-family: "Amiri";
             padding-top: .5rem;
             padding-bottom: .5rem;
         }
 
         main {
+            font-family: "Amiri";
             margin-top: 1rem;
+        }
+
+        /* Styles for medium-sized screens */
+        @media (min-width: 768px) {
+            body {
+                font-size: 1.6rem;
+            }
         }
     </style>
 
@@ -42,7 +67,7 @@
 
 <body>
     <form autocomplete="off" action="/" method="get">
-        <button type="submit" style="font-size: inherit; font-family: inherit;">Search</button>
+        <button type="submit" style="font-size: inherit;">Search</button>
         <input value="{{.Word}}" name="w" id="w" type="text" placeholder="ابحث" {{if not .Word}}autofocus{{end}}>
     </form>
 
@@ -52,13 +77,13 @@
             <thead>
                 <td class="px">Def</td>
                 <td class="px">Word</td>
-                <td class="px">Root</td>
+                <!-- <td class="px">Root</td> -->
             </thead>
             {{range .Entries}}
             <tr>
                 <td class="px">{{.Word}}</td>
                 <td class="px">{{.Def}}</td>
-                <td class="px">{{.Root}}</td>
+                <!-- <td class="px">{{.Root}}</td> -->
             </tr>
             {{end}}
         </table>
