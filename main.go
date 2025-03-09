@@ -14,7 +14,7 @@ import (
 	"github.com/wizsk/dict/dict"
 )
 
-const debug = true
+const debug = !true
 
 //go:embed pub/*
 var staticData embed.FS
