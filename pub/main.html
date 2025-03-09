@@ -152,11 +152,12 @@
                 const words = w.value.trim();
                 fetch(`/wr?w=${words}`).then(async (r) => {
                     if (r.ok) {
-                        // res.innterHTML = r.body.data;
                         res.innerHTML = await r.text();
                     }
+                }).catch((err) => {
+                    res.innerText = "Cound't fetch results. Is the server running?";
                 })
-            }, 250);
+            }, 100);
         }
     </script>
 </body>
