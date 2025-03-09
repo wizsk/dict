@@ -29,7 +29,7 @@ var buck2uni = map[rune]rune{
 	'Z':  0x0638, // Zaa' (DHaa')
 	'E':  0x0639, // cayn
 	'g':  0x063A, // ghayn
-	'_':  0x0640, // taTwiil
+	// '_':  0x0640, // taTwiil
 	'f':  0x0641, // faa'
 	'q':  0x0642, // qaaf
 	'k':  0x0643, // kaaf
@@ -85,9 +85,11 @@ loop:
 				}
 			}
 			r = append(r, v)
-		} else {
-			r = append(r, c)
 		}
+		// this just essensially removes all the char other than arabic char
+		// else {
+		// 	r = append(r, c)
+		// }
 	}
 	return string(r)
 }

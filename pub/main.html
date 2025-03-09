@@ -9,14 +9,14 @@
 
     <style>
         @font-face {
-            font-family: "Amiri";
-            src: url("/pub/Amiri-Regular.ttf") format("truetype");
+            font-family: "font";
+            src: url("/pub/Kitab-Regular.ttf") format("truetype");
             font-weight: normal;
             font-style: normal;
         }
 
         body {
-            font-family: "Amiri";
+            font-family: "font";
             font-size: 1.2rem;
             width: fit-content;
             margin: auto;
@@ -38,14 +38,19 @@
         }
 
         #w {
-            font-family: "Amiri";
+            font-family: "font";
             background-color: inherit;
             direction: rtl;
             text-align: right;
             font-size: inherit;
-            max-width: 17rem;
+            /* max-width: 17rem; */
             padding-top: .5rem;
             padding-bottom: .5rem;
+        }
+
+        input {
+            text-align: right;
+            direction: rtl;
         }
 
         button {
@@ -57,19 +62,19 @@
         }
 
         main {
-            font-family: "Amiri";
+            font-family: "font";
             margin-top: 1rem;
             /* max-width: 95vh; */
         }
 
         .w-4 {
-            width: 4rem;
+            /* width: 4rem; */
             padding-left: 0.5rem;
             /* background-color: rgba(255, 0, 0, 0.493); */
         }
 
         .w-def {
-            width: 12.5rem;
+            /* width: 12.5rem; */
             padding-left: 0.5rem;
             /* background-color: rgba(0, 0, 255, 0.336); */
         }
@@ -92,7 +97,7 @@
             }
 
             .w-def {
-                width: 20rem;
+                /* width: 30rem; */
             }
         }
     </style>
@@ -105,27 +110,8 @@
         <input value="{{.Word}}" name="w" id="w" type="text" placeholder="ابحث" {{if not .Word}}autofocus{{end}}>
     </form>
 
-    <main>
-        {{if .Entries}}
-        <table>
-            <thead>
-                <td class="w-4">Word</td>
-                <td class="w-def">Def</td>
-                <td class="w-4">Root</td>
-            </thead>
-            {{range .Entries}}
-            <tr class="padd">
-                <td class="w-4">{{.Word}}</td>
-                <td class="w-def">{{.Def}}</td>
-                <td class="w-4">{{.Root}}</td>
-            </tr>
-            {{end}}
-        </table>
-        {{else if .Word}}
-        No resusts for: "{{.Word}}"
-        {{else}}
-        Search for something
-        {{end}}
+    <main id="res">
+        {{template "res.html" .}}
     </main>
 
     <script>
@@ -157,6 +143,21 @@
 
             }
         })
+
+        let searhInvId;
+        const res = document.getElementById("res");
+        w.oninput = () => {
+            clearInterval(searhInvId);
+            searhInvId = setTimeout(() => {
+                const words = w.value.trim();
+                fetch(`/wr?w=${words}`).then(async (r) => {
+                    if (r.ok) {
+                        // res.innterHTML = r.body.data;
+                        res.innerHTML = await r.text();
+                    }
+                })
+            }, 250);
+        }
     </script>
 </body>
 

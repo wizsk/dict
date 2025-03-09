@@ -1,0 +1,20 @@
+{{if .Entries}}
+<table>
+    <thead>
+        <td class="w-4">Word</td>
+        <td class="w-def">Def</td>
+        <td class="w-4">Root</td>
+    </thead>
+    {{range .Entries}}
+    <tr class="padd">
+        <td class="w-4">{{.Word}}</td>
+        <td class="w-def">{{.Def}}</td>
+        <td class="w-4">{{.Root}}</td>
+    </tr>
+    {{end}}
+</table>
+{{else if .Word}}
+No resusts for: "{{.Word}}"
+{{else}}
+Search for something
+{{end}}

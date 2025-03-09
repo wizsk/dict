@@ -35,6 +35,15 @@ type Entry struct {
 	Pos   string
 }
 
+func (d *Dictionary) FindWords(words string) []Entry {
+	var res []Entry
+	for _, w := range strings.Split(words, " ") {
+		if w != "" {
+			res = append(res, d.FindWord(w)...)
+		}
+	}
+	return res
+}
 func (d *Dictionary) FindWord(word string) []Entry {
 	if word == "" {
 		return nil
@@ -145,6 +154,46 @@ func parseTabl(f string) tableEntries {
 }
 
 func parseDict(f string) dictEntries {
+	// data := p(os.ReadFile(f))
+	data := p(dictFiles.Open(f))
+	defer data.Close()
+	en := map[string][]Entry{}
+
+	root := ""
+	family := ""
+	lines := bufio.NewScanner(data)
+	lineC := 0
+	for lines.Scan() {
+		lineC++
+		// l := strings.TrimSpace(lines.Text())
+		l := lines.Text()
+		// blank line
+		if len(l) == 0 /* || strings.TrimSpace(l) == ";" */ {
+			continue
+		}
+
+		if strings.Contains(l, ";--- ") {
+			root = strings.Split(l, " ")[1]
+		} else if strings.Contains(l, "; form") {
+			family = strings.Split(l, " ")[2]
+		} else if l[0] != ';' {
+			parts := strings.SplitN(l, "\t", 4)
+			e := Entry{
+				Root: root, Word: parts[1],
+				Morph: parts[2], Def: parts[3],
+				Fam: family,
+			}
+
+			en[parts[0]] = append(en[parts[0]], e)
+		} else if l[0] == ';' {
+			root = ""
+		}
+	}
+
+	return en
+}
+
+func _parseDict(f string) dictEntries {
 	// data := p(os.ReadFile(f))
 	data := p(dictFiles.Open(f))
 	defer data.Close()

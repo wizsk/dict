@@ -14,7 +14,7 @@ import (
 	"github.com/wizsk/dict/dict"
 )
 
-const debug = !true
+const debug = true
 
 //go:embed pub/*
 var staticData embed.FS
@@ -29,18 +29,31 @@ func main() {
 		fmt.Println("---- running in debug mode ----")
 	}
 	dict := dict.MakeData()
-	tmpl := p(template.ParseFS(staticData, "pub/main.html"))
+	tmpl := p(template.ParseFS(staticData, "pub/*.html"))
+
+	// word res
+	http.HandleFunc("/wr", func(w http.ResponseWriter, r *http.Request) {
+		if debug {
+			tmpl = p(template.ParseGlob("pub/*.html"))
+		}
+		d := Data{Word: strings.TrimSpace(r.FormValue("w"))}
+		d.Entries = dict.FindWords(d.Word)
+		if err := tmpl.ExecuteTemplate(w, "res.html", &d); debug && err != nil {
+			panic(err)
+		}
+	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if debug {
-			tmpl = p(template.ParseFiles("pub/main.html"))
+			tmpl = p(template.ParseGlob("pub/*.html"))
 		}
 		d := Data{Word: strings.TrimSpace(r.FormValue("w"))}
-		d.Entries = dict.FindWord(d.Word)
+		d.Entries = dict.FindWords(d.Word)
 		if err := tmpl.Execute(w, &d); debug && err != nil {
 			panic(err)
 		}
 	})
+
 
 	http.Handle("/pub/", http.FileServerFS(staticData))
 
