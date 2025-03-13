@@ -185,8 +185,10 @@ func parseDict(f string) dictEntries {
 			}
 
 			en[parts[0]] = append(en[parts[0]], e)
-		} else if l[0] == ';' {
+		} else if l == ";" {
+			// reset
 			root = ""
+			family = ""
 		}
 	}
 
