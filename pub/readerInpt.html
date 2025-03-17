@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader</title>
+
+    <style>
+        @font-face {
+            font-family: "font";
+            src: url("/pub/Kitab-Regular.ttf") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'font';
+        }
+    </style>
+</head>
+
+<body>
+    <form action="/rd" method="post">
+        <textarea name="txt" id="txt"></textarea>
+        <button type="submit">Go</button>
+    </form>
+</body>
+
+</html>

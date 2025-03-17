@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader</title>
+
+    <style>
+        @font-face {
+            font-family: "font";
+            src: url("/pub/Kitab-Regular.ttf") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'font';
+            max-width: 720px;
+            text-align: right;
+            direction: rtl;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 1rem;
+            font-size: 1.4rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .nf {
+            color: red;
+        }
+
+        .res {
+            padding: 1rem;
+            text-align: left;
+            direction: ltr;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            overflow: scroll;
+            background: white;
+        }
+
+        .word {
+            cursor: pointer;
+        }
+
+        .word:hover {
+            color: rgb(31, 88, 194);
+        }
+
+        .pera {
+            margin-bottom: 3.5rem;
+        }
+
+        /* Styles for medium-sized screens */
+        @media (min-width: 768px) {
+            body {
+                font-size: 1.9rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {{range .}}
+    <div class="pera">
+        {{range .}}
+        <span class="{{if .NoRes}}nf{{else}}word{{end}}">
+            <span>
+                {{.Word}}
+            </span>
+            <span class="res hidden">
+                <span style="margin-left: auto; margin-right: auto;">
+                    {{template "res.html" .}}
+                </span>
+            </span>
+        </span>
+        {{end}}
+    </div>
+    {{end}}
+
+    <script>
+        const words = document.querySelectorAll(".word");
+        words.forEach((w) => {
+            w.addEventListener('click', () => {
+                const res = w.querySelector(".res");
+                res.classList.toggle("hidden");
+            })
+        })
+    </script>
+</body>
+
+</html>

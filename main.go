@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"embed"
 	"fmt"
 	"html/template"
@@ -24,12 +25,50 @@ type Data struct {
 	Entries []dict.Entry
 }
 
+type server struct {
+	d dict.Dictionary
+	t *template.Template
+}
+
+type ReaderWord struct {
+	Word    string
+	NoRes   bool
+	Entries []dict.Entry
+}
+
+func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
+	t := s.t
+	if debug {
+		t = p(template.ParseGlob("pub/*.html"))
+	}
+	if r.Method != http.MethodPost {
+		t.ExecuteTemplate(w, "readerInpt.html", nil)
+		return
+	}
+	txt := r.FormValue("txt")
+	sc := bufio.NewScanner(strings.NewReader(txt))
+	reader := [][]ReaderWord{}
+	for sc.Scan() {
+		// current pera
+		cp := []ReaderWord{}
+		for _, w := range strings.Split(sc.Text(), " ") {
+			if w != "" {
+				wr := s.d.FindWord(w)
+				cp = append(cp, ReaderWord{w, len(wr) == 0, wr})
+			}
+		}
+		reader = append(reader, cp)
+	}
+	t.ExecuteTemplate(w, "reader.html", reader)
+}
+
 func main() {
 	if debug {
 		fmt.Println("---- running in debug mode ----")
 	}
 	dict := dict.MakeData()
 	tmpl := p(template.ParseFS(staticData, "pub/*.html"))
+	sv := server{dict, tmpl}
 
 	// word res
 	http.HandleFunc("/wr", func(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +93,7 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/rd", sv.readerHandler)
 
 	http.Handle("/pub/", http.FileServerFS(staticData))
 
