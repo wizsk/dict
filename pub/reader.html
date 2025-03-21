@@ -17,8 +17,11 @@
 
         :root {
             font-family: 'font';
-            font-size: 1.4rem;
             background: whitesmoke;
+        }
+
+        body {
+            font-size: 1.4rem;
         }
 
         #reader {
@@ -27,34 +30,22 @@
             direction: rtl;
             margin-left: auto;
             margin-right: auto;
+            margin-bottom: 3rem;
             padding: 1rem 0.2rem;
             padding-top: 0;
         }
 
         .pera {
-            margin-bottom: 3rem;
+            margin-bottom: 1.3rem;
         }
 
-
+        /* not found */
         .nf {
             color: red;
         }
 
-        .res {
-            padding: 1rem;
-            text-align: left;
-            direction: ltr;
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 100%;
-            overflow: scroll;
-        }
-
         .word {
             cursor: pointer;
-            overflow: scroll;
         }
 
         .hidden {
@@ -76,8 +67,14 @@
         #minus {
             padding: 10px 20px;
             margin-left: 10px;
+        }
 
-            /* background: rgba(3, 27, 48, 0.384); */
+        #plus,
+        #minus,
+        #wordTblCloseBtn {
+            color: white;
+            border-radius: 1rem;
+            background: rgb(3, 27, 48);
             border: none;
         }
 
@@ -103,10 +100,12 @@
         }
 
         #wordResInpt {
+            max-width: 300px;
             text-align: right;
             direction: rtl;
             font-family: inherit;
             font-size: inherit;
+            padding: 0.3rem;
         }
 
         #wordTblCloseBtn {
@@ -114,20 +113,19 @@
             display: block;
             margin: 10px;
             padding: 10px 20px;
-            border: none;
             left: 0;
             bottom: 0;
         }
 
-        .w-4 {
+        .w-4,
+        .w-def {
             /* width: 4rem; */
             padding-left: 0.5rem;
             /* background-color: rgba(255, 0, 0, 0.493); */
-        }
-
-        .w-def {
+            /* } */
+            /* .w-def { */
             /* width: 12.5rem; */
-            padding-left: 0.5rem;
+            /* padding-left: 0.5rem; */
             /* background-color: rgba(0, 0, 255, 0.336); */
         }
 
@@ -138,7 +136,7 @@
 
         table thead,
         tr:nth-child(even) {
-            background-color: #dad7d748;
+            background-color: #c1d3ee48;
         }
 
         /* Styles for medium-sized screens */
@@ -155,7 +153,7 @@
         {{range .}}
         <div class="pera">
             {{range .}}
-            <span class="{{if .NoRes}}nf{{else}}word{{end}}" onclick='showWord("{{.Word}}",
+            <span class="word {{if not .Entries}}nf{{end}}" onclick='showWord("{{.Word}}",
             `{{template "res.html" .}}`)'>
                 {{.Word}}
             </span>
@@ -170,7 +168,7 @@
             <main id="wordResTbl">
             </main>
         </div>
-        <button id="wordTblCloseBtn" onclick="closeWordTbl()">close</button>
+        <button id="wordTblCloseBtn" onclick="closeWordTbl()">Close</button>
     </div>
 
     <div id="font-size">
@@ -181,8 +179,8 @@
     <script>
         document.addEventListener('keydown', (e) => {
             if (e.code === "Escape") {
-                if
-                    (document.activeElement === wordResInpt) wordResInpt.blur();
+                if (document.activeElement === wordResInpt)
+                    wordResInpt.blur();
                 else
                     closeWordTbl();
             }
