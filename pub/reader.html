@@ -155,8 +155,8 @@
         {{range .}}
         <div class="pera">
             {{range .}}
-            <span class="{{if .NoRes}}nf{{else}}word{{end}}" {{if .Word}} onclick='showWord("{{.Word}}",
-            `{{template "res.html" .}}`)' {{end}}>
+            <span class="{{if .NoRes}}nf{{else}}word{{end}}" onclick='showWord("{{.Word}}",
+            `{{template "res.html" .}}`)'>
                 {{.Word}}
             </span>
             {{end}}
