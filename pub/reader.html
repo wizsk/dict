@@ -17,18 +17,24 @@
 
         :root {
             font-family: 'font';
+            font-size: 1.4rem;
+            background: whitesmoke;
+        }
+
+        #reader {
             max-width: 720px;
             text-align: right;
             direction: rtl;
             margin-left: auto;
             margin-right: auto;
             padding: 1rem 0.2rem;
-            font-size: 1.4rem;
+            padding-top: 0;
         }
 
-        .hidden {
-            display: none;
+        .pera {
+            margin-bottom: 3rem;
         }
+
 
         .nf {
             color: red;
@@ -44,20 +50,20 @@
             height: 100%;
             width: 100%;
             overflow: scroll;
-            background: white;
         }
 
         .word {
             cursor: pointer;
+            overflow: scroll;
         }
 
-        .word:hover {
+        .hidden {
+            display: none;
+        }
+
+        /* .word:hover {
             color: rgb(31, 88, 194);
-        }
-
-        .pera {
-            margin-bottom: 3.5rem;
-        }
+        } */
 
         #font-size {
             position: fixed;
@@ -68,10 +74,71 @@
 
         #plus,
         #minus {
-            padding: 20px;
+            padding: 10px 20px;
+            margin-left: 10px;
 
             /* background: rgba(3, 27, 48, 0.384); */
             border: none;
+        }
+
+        #wordTbl {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+
+            background: whitesmoke;
+            overflow: scroll;
+
+        }
+
+        #wordTbl_div {
+            margin: 1rem 0.4rem;
+            margin-bottom: 3rem;
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        #wordResInpt {
+            text-align: right;
+            direction: rtl;
+            font-family: inherit;
+            font-size: inherit;
+        }
+
+        #wordTblCloseBtn {
+            position: fixed;
+            display: block;
+            margin: 10px;
+            padding: 10px 20px;
+            border: none;
+            left: 0;
+            bottom: 0;
+        }
+
+        .w-4 {
+            /* width: 4rem; */
+            padding-left: 0.5rem;
+            /* background-color: rgba(255, 0, 0, 0.493); */
+        }
+
+        .w-def {
+            /* width: 12.5rem; */
+            padding-left: 0.5rem;
+            /* background-color: rgba(0, 0, 255, 0.336); */
+        }
+
+        .padd {
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+        }
+
+        table thead,
+        tr:nth-child(even) {
+            background-color: #dad7d748;
         }
 
         /* Styles for medium-sized screens */
@@ -84,22 +151,27 @@
 </head>
 
 <body>
-    {{range .}}
-    <div class="pera">
+    <div id="reader">
         {{range .}}
-        <span class="{{if .NoRes}}nf{{else}}word{{end}}">
-            <span>
+        <div class="pera">
+            {{range .}}
+            <span class="{{if .NoRes}}nf{{else}}word{{end}}" {{if .Word}} onclick='showWord("{{.Word}}",
+            `{{template "res.html" .}}`)' {{end}}>
                 {{.Word}}
             </span>
-            <span class="res hidden">
-                <span style="margin-left: auto; margin-right: auto;">
-                    {{template "res.html" .}}
-                </span>
-            </span>
-        </span>
+            {{end}}
+        </div>
         {{end}}
     </div>
-    {{end}}
+
+    <div id="wordTbl" class="hidden">
+        <div id="wordTbl_div">
+            <input value="" name="w" id="wordResInpt" type="text">
+            <main id="wordResTbl">
+            </main>
+        </div>
+        <button id="wordTblCloseBtn" onclick="closeWordTbl()">close</button>
+    </div>
 
     <div id="font-size">
         <button id="plus">A+</button>
@@ -107,18 +179,50 @@
     </div>
 
     <script>
-        const words = document.querySelectorAll(".word");
-        words.forEach((w) => {
-            w.addEventListener('click', () => {
-                const res = w.querySelector(".res");
-                res.classList.toggle("hidden");
-            })
+        document.addEventListener('keydown', (e) => {
+            if (e.code === "Escape") {
+                if
+                    (document.activeElement === wordResInpt) wordResInpt.blur();
+                else
+                    closeWordTbl();
+            }
         })
+
+        function closeWordTbl() {
+            wordTbl.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+
+        }
+
+        function showWord(word, tabl) {
+            wordResInpt.value = word;
+            wordResTbl.innerHTML = tabl;
+
+            wordTbl.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        let searhInvId;
+        const res = wordResTbl;
+        wordResInpt.oninput = () => {
+            clearInterval(searhInvId);
+            searhInvId = setTimeout(() => {
+                const words = wordResInpt.value.trim();
+                fetch(`/wr?w=${words}`).then(async (r) => {
+                    if (r.ok) {
+                        res.innerHTML = await r.text();
+                    }
+                }).catch((err) => {
+                    res.innerText = "Cound't fetch results. Is the server running?";
+                })
+            }, 100);
+        }
+
 
         const fontDiffCVal = 2.0;
         plus.addEventListener("click", () => {
             const s = parseFloat(window.getComputedStyle(document.body, null).getPropertyValue("font-size"))
-            const fs = `${s + fontDiffCVal}px`;
+            document.body.style.fontSize = `${s + fontDiffCVal}px`;
         })
 
         minus.addEventListener("click", () => {
