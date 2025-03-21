@@ -4,27 +4,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="/pub/fav.png" type="image/x-icon">
     <title>Reader</title>
 
     <style>
-        @font-face {
-            font-family: "font";
-            src: url("/pub/Kitab-Regular.ttf") format("truetype");
-            font-weight: normal;
-            font-style: normal;
+        form {
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2rem 0;
         }
 
-        body {
-            font-family: 'font';
+        button {
+            display: block;
+            padding: 1rem;
         }
     </style>
 </head>
 
 <body>
-    <form action="/rd" method="post">
-        <textarea name="txt" id="txt"></textarea>
+    <form action="/rd" method="post" id="form">
+        <textarea name="txt" id="txt" autofocus rows="20" cols="30"></textarea>
         <button type="submit">Go</button>
     </form>
+
+    <script>
+        txt.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.shiftKey) && e.code == "Enter") {
+                form.submit();
+            }
+        });
+    </script>
 </body>
 
 </html>

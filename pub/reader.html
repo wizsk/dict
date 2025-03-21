@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="/pub/fav.png" type="image/x-icon">
     <title>Reader</title>
 
     <style>
@@ -14,14 +15,14 @@
             font-style: normal;
         }
 
-        body {
+        :root {
             font-family: 'font';
             max-width: 720px;
             text-align: right;
             direction: rtl;
             margin-left: auto;
             margin-right: auto;
-            padding: 1rem;
+            padding: 1rem 0.2rem;
             font-size: 1.4rem;
         }
 
@@ -58,13 +59,28 @@
             margin-bottom: 3.5rem;
         }
 
-        /* Styles for medium-sized screens */
-        @media (min-width: 768px) {
-            body {
-                font-size: 1.9rem;
-            }
+        #font-size {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            margin: 10px;
         }
+
+        #plus,
+        #minus {
+            padding: 20px;
+
+            /* background: rgba(3, 27, 48, 0.384); */
+            border: none;
+        }
+
+        /* Styles for medium-sized screens */
+        /* @media (min-width: 768px) {
+            body {
+            }
+        } */
     </style>
+
 </head>
 
 <body>
@@ -85,6 +101,11 @@
     </div>
     {{end}}
 
+    <div id="font-size">
+        <button id="plus">A+</button>
+        <button id="minus">A-</button>
+    </div>
+
     <script>
         const words = document.querySelectorAll(".word");
         words.forEach((w) => {
@@ -92,6 +113,17 @@
                 const res = w.querySelector(".res");
                 res.classList.toggle("hidden");
             })
+        })
+
+        const fontDiffCVal = 2.0;
+        plus.addEventListener("click", () => {
+            const s = parseFloat(window.getComputedStyle(document.body, null).getPropertyValue("font-size"))
+            const fs = `${s + fontDiffCVal}px`;
+        })
+
+        minus.addEventListener("click", () => {
+            const s = parseFloat(window.getComputedStyle(document.body, null).getPropertyValue("font-size"))
+            document.body.style.fontSize = `${s - fontDiffCVal}px`;
         })
     </script>
 </body>
