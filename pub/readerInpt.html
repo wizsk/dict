@@ -29,6 +29,16 @@
         <button type="submit">Go</button>
     </form>
 
+    {{if .}}
+    <ul>
+        {{range $i, $d := .}}
+        <li>
+            <a href="/rd?hist={{$i}}">{{$d.Name}}</a>
+        </li>
+        {{end}}
+    </ul>
+    {{end}}
+
     <script>
         txt.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.shiftKey) && e.code == "Enter") {

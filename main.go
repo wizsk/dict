@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/sha256"
 	"embed"
 	"fmt"
 	"html/template"
@@ -11,11 +13,12 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/wizsk/dict/dict"
 )
 
-const debug = !true
+const debug = true
 
 //go:embed pub/*
 var staticData embed.FS
@@ -41,17 +44,41 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 	if debug {
 		t = p(template.ParseGlob("pub/*.html"))
 	}
-	if r.Method != http.MethodPost {
-		t.ExecuteTemplate(w, "readerInpt.html", nil)
+
+	txt := strings.TrimSpace(r.FormValue("txt"))
+	if txt == "" {
+		readerHistRWM.RLock()
+		defer readerHistRWM.RUnlock()
+
+		histIdx, err := strconv.Atoi(strings.TrimSpace(r.FormValue("hist")))
+		if err != nil {
+			t.ExecuteTemplate(w, "readerInpt.html", &readerHistArr)
+		} else {
+			if histIdx < 0 || len(readerHistArr) <= histIdx {
+				http.Redirect(w, r, "/rd", http.StatusMovedPermanently)
+			} else {
+				w.Write(readerHistArr[histIdx].data)
+			}
+		}
 		return
 	}
-	txt := r.FormValue("txt")
+
+	pageName := ""
 	sc := bufio.NewScanner(strings.NewReader(txt))
 	reader := [][]ReaderWord{}
-	for sc.Scan() {
+	for f := true; sc.Scan(); {
 		// current pera
 		cp := []ReaderWord{}
-		for _, w := range strings.Split(sc.Text(), " ") {
+		l := strings.TrimSpace(sc.Text())
+		if l == "" {
+			continue
+		}
+		// 1st line && found arabic line
+		if f && dict.ContainsArabic(l) {
+			f = false
+			pageName = l
+		}
+		for _, w := range strings.Split(l, " ") {
 			if w != "" {
 				wr := s.d.FindWord(w)
 				cp = append(cp, ReaderWord{w, len(wr) == 0, wr})
@@ -59,8 +86,37 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		reader = append(reader, cp)
 	}
-	t.ExecuteTemplate(w, "reader.html", reader)
+
+	buf := new(bytes.Buffer)
+	if err := t.ExecuteTemplate(buf, "reader.html", reader); debug && err != nil {
+		panic(err)
+	}
+	w.Write(buf.Bytes())
+
+	readerHistRWM.Lock()
+	defer readerHistRWM.Unlock()
+
+	sha := sha256.Sum256(buf.Bytes())
+	for i := 0; i < len(readerHistArr); i++ {
+		if sha == readerHistArr[i].sha256 {
+			return
+		}
+	}
+
+	readerHistArr = append(readerHistArr,
+		ReaderHist{sha, pageName, buf.Bytes()})
 }
+
+type ReaderHist struct {
+	sha256 [32]byte
+	Name   string
+	data   []byte
+}
+
+var (
+	readerHistRWM sync.RWMutex
+	readerHistArr []ReaderHist
+)
 
 func main() {
 	if debug {
