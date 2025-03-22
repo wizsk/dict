@@ -8,6 +8,24 @@
     <title>Reader</title>
 
     <style>
+        @font-face {
+            font-family: "font";
+            src: url("/pub/Kitab-Regular.ttf") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        :root {
+            font-family: 'font';
+            background: whitesmoke;
+        }
+
+        body {
+            direction: rtl;
+            text-align: right;
+            font-size: 1.2rem;
+        }
+
         form {
             display: flex;
             align-items: center;
@@ -16,27 +34,61 @@
             margin: 2rem 0;
         }
 
+        #txt {
+            padding: 0.5rem;
+            font-family: inherit;
+            font-size: inherit;
+        }
+
         button {
             display: block;
             padding: 1rem;
+        }
+
+
+        #hist {
+            margin: 3rem 1rem;
+        }
+
+        .hist-item {
+            margin: 0.7rem 0;
+            display: block;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-decoration: none;
+            color: rgb(7, 7, 133);
+        }
+
+        /* Styles for medium-sized screens */
+        @media (min-width: 768px) {
+            body {
+                font-size: 1.4rem;
+                display: flex;
+                align-items: center;
+                flex-direction: column;
+            }
+
+            .hist-item {
+                max-width: 500px;
+            }
         }
     </style>
 </head>
 
 <body>
     <form action="/rd" method="post" id="form">
-        <textarea name="txt" id="txt" autofocus rows="20" cols="30"></textarea>
+        <textarea name="txt" id="txt" autofocus rows="8" cols="25"></textarea>
         <button type="submit">Go</button>
     </form>
 
     {{if .}}
-    <ul>
+    <main id="hist">
         {{range $i, $d := .}}
-        <li>
-            <a href="/rd?hist={{$i}}">{{$d.Name}}</a>
-        </li>
+        <a class="hist-item" href="/rd?hist={{$i}}">- {{$d.Name}}</a>
         {{end}}
-    </ul>
+    </main>
     {{end}}
 
     <script>
