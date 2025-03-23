@@ -5,11 +5,14 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"embed"
+	"encoding/json"
 	"fmt"
+	"html"
 	"html/template"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -35,9 +38,65 @@ type server struct {
 
 type ReaderWord struct {
 	Word    string
-	NoRes   bool
 	Entries []dict.Entry
 }
+
+type ReaderHistItem struct {
+	Sha256 string
+	Name   string
+	Data   []byte
+}
+type ReaderHist struct {
+	Hist       [10]ReaderHistItem
+	Start, Len int
+	mtx        sync.RWMutex
+}
+
+func loadHistFromFile() {
+	data, err := os.ReadFile(histFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			fmt.Println("WARN: could not read:", histFile, "reason:", err)
+		}
+		return
+	}
+
+	if err = json.Unmarshal(data, &readerHist); err != nil {
+		fmt.Println("WARN: could not parse json:", err)
+		return
+	}
+	fmt.Println("INFO: loaded history form:", histFile)
+}
+
+func (rh *ReaderHist) saveToFile() {
+	data, err := json.Marshal(rh)
+	if err != nil {
+		fmt.Println("WARN: could not make json:", err)
+		return
+	}
+
+	f, err := os.Create(histFile)
+	if err != nil {
+		fmt.Println("WARN: could not create:", histFile, "reason:", err)
+		return
+	}
+	defer f.Close()
+	if _, err = f.Write(data); err != nil {
+		fmt.Println("WARN: could not write to:", histFile, "reason:", err)
+		return
+	}
+}
+
+var (
+	readerHist ReaderHist
+	histFile   = func() string {
+		const n = ".dict_history.json"
+		if h, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(h, n)
+		}
+		return n
+	}()
+)
 
 func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 	t := s.t
@@ -47,18 +106,33 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 
 	txt := strings.TrimSpace(r.FormValue("txt"))
 	if txt == "" {
-		readerHistRWM.RLock()
-		defer readerHistRWM.RUnlock()
+		readerHist.mtx.RLock()
+		defer readerHist.mtx.RUnlock()
 
-		histIdx, err := strconv.Atoi(strings.TrimSpace(r.FormValue("hist")))
-		if err != nil {
-			t.ExecuteTemplate(w, "readerInpt.html", &readerHistArr)
-		} else {
-			if histIdx < 0 || len(readerHistArr) <= histIdx {
-				http.Redirect(w, r, "/rd", http.StatusMovedPermanently)
-			} else {
-				w.Write(readerHistArr[histIdx].data)
+		sha := strings.TrimSpace(r.FormValue("hist"))
+		if sha == "" {
+			var s strings.Builder
+			for i := 0; i < readerHist.Len; i++ {
+				idx := readerHist.Start + i
+				idx %= len(readerHist.Hist)
+				a := fmt.Sprintf(`<a class="hist-item" href="/rd?hist=%s">- %s</a>`,
+					readerHist.Hist[idx].Sha256, html.EscapeString(readerHist.Hist[idx].Name))
+				s.WriteString(a)
 			}
+			if err := t.ExecuteTemplate(w, "readerInpt.html",
+				template.HTML(s.String())); debug && err != nil {
+				panic(err)
+			}
+		} else {
+			for i := 0; i < readerHist.Len; i++ {
+				idx := readerHist.Start + i
+				idx %= len(readerHist.Hist)
+				if sha == readerHist.Hist[i].Sha256 {
+					w.Write(readerHist.Hist[idx].Data)
+					return
+				}
+			}
+			http.Redirect(w, r, "/rd", http.StatusMovedPermanently)
 		}
 		return
 	}
@@ -74,14 +148,16 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		// 1st line && found arabic line
-		if f && dict.ContainsArabic(l) {
-			f = false
-			pageName = l
+		if f {
+			if pageName == "" {
+				pageName = l
+			}
+			f = !dict.ContainsArabic(l)
 		}
 		for _, w := range strings.Split(l, " ") {
 			if w != "" {
 				wr := s.d.FindWord(w)
-				cp = append(cp, ReaderWord{w, len(wr) == 0, wr})
+				cp = append(cp, ReaderWord{w, wr})
 			}
 		}
 		reader = append(reader, cp)
@@ -93,30 +169,28 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(buf.Bytes())
 
-	readerHistRWM.Lock()
-	defer readerHistRWM.Unlock()
+	// thread safe code from here
+	readerHist.mtx.Lock()
+	defer readerHist.mtx.Unlock()
 
-	sha := sha256.Sum256(buf.Bytes())
-	for i := 0; i < len(readerHistArr); i++ {
-		if sha == readerHistArr[i].sha256 {
+	sha := fmt.Sprintf("%x", sha256.Sum256(buf.Bytes()))
+	for i := 0; i < len(readerHist.Hist); i++ {
+		if sha == readerHist.Hist[i].Sha256 {
 			return
 		}
 	}
 
-	readerHistArr = append(readerHistArr,
-		ReaderHist{sha, pageName, buf.Bytes()})
+	// wraping time. the hist is full..
+	if readerHist.Len >= len(readerHist.Hist) {
+		// the item wich was inserted first will be rewritten
+		readerHist.Start = (readerHist.Start + 1) % len(readerHist.Hist)
+		readerHist.Len--
+	}
+	idx := (readerHist.Start + readerHist.Len) % len(readerHist.Hist)
+	readerHist.Hist[idx] = ReaderHistItem{sha, pageName, buf.Bytes()}
+	readerHist.Len++
+	readerHist.saveToFile()
 }
-
-type ReaderHist struct {
-	sha256 [32]byte
-	Name   string
-	data   []byte
-}
-
-var (
-	readerHistRWM sync.RWMutex
-	readerHistArr []ReaderHist
-)
 
 func main() {
 	if debug {
@@ -125,6 +199,7 @@ func main() {
 	dict := dict.MakeData()
 	tmpl := p(template.ParseFS(staticData, "pub/*.html"))
 	sv := server{dict, tmpl}
+	loadHistFromFile()
 
 	// word res
 	http.HandleFunc("/wr", func(w http.ResponseWriter, r *http.Request) {

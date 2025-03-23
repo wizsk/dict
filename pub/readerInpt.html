@@ -85,9 +85,7 @@
 
     {{if .}}
     <main id="hist">
-        {{range $i, $d := .}}
-        <a class="hist-item" href="/rd?hist={{$i}}">- {{$d.Name}}</a>
-        {{end}}
+        {{.}}
     </main>
     {{end}}
 
