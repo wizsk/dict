@@ -41,7 +41,7 @@
         }
 
         button {
-            display: block;
+            display: inline-block;
             padding: 1rem;
         }
 
@@ -74,14 +74,25 @@
                 max-width: 500px;
             }
         }
+
+        #goToDict {
+            margin-top: 2rem;
+            display: block;
+            color: inherit;
+        }
     </style>
 </head>
 
 <body>
     <form action="/rd" method="post" id="form">
         <textarea name="txt" id="txt" autofocus rows="8" cols="25"></textarea>
-        <button type="submit">Go</button>
+        <div>
+            <button id="submit" type="submit">Go</button>
+            <button onclick="txt.value = ''" type="button">Clear</button>
+        </div>
     </form>
+
+    <a href="/" id="goToDict">Open Dictionary</a>
 
     {{if .}}
     <main id="hist">
@@ -90,9 +101,40 @@
     {{end}}
 
     <script>
-        txt.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', (e) => {
+            console.log(e.code);
             if ((e.ctrlKey || e.shiftKey) && e.code == "Enter") {
-                form.submit();
+                e.preventDefault();
+                form.submit.click();
+            }
+
+            if (document.activeElement === txt) {
+                if (e.code === "Escape") txt.blur();
+                return;
+            }
+
+
+            // no composite key
+            if (/*e.shiftKey ||*/ e.ctrlKey)
+                return;
+
+            switch (e.code) {
+                case "KeyS":
+                    e.preventDefault();
+                    input.focus();
+                    input.setSelectionRange(input.value.length, input.value.length);
+                    break;
+                case "KeyI":
+                    e.preventDefault();
+                    input.focus();
+                    input.select();
+                    break;
+
+                case "KeyR":
+                    e.preventDefault();
+                    goToReader.click();
+                    break;
+
             }
         });
     </script>

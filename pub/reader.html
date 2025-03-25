@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html>
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="/pub/fav.png" type="image/x-icon">
-    <title>Reader</title>
+    <title>القراءة: {{.Name}}</title>
 
     <style>
         @font-face {
@@ -17,15 +17,16 @@
 
         :root {
             font-family: 'font';
-            background: whitesmoke;
         }
 
         body {
+            --background: whitesmoke;
             font-size: 1.2rem;
+            background: var(--background);
         }
 
         #reader {
-            max-width: 720px;
+            max-width: 35em;
             text-align: right;
             direction: rtl;
             margin-left: auto;
@@ -66,7 +67,6 @@
 
         #plus,
         #minus {
-            padding: 10px 20px;
             margin-left: 10px;
         }
 
@@ -74,6 +74,7 @@
         #minus,
         #wordTblCloseBtn {
             color: white;
+            padding: 15px 25px;
             border-radius: 1rem;
             background: rgb(3, 27, 48);
             border: none;
@@ -85,7 +86,6 @@
             left: 0;
             height: 100%;
             width: 100%;
-
             background: whitesmoke;
             overflow: scroll;
 
@@ -113,7 +113,6 @@
             position: fixed;
             display: block;
             margin: 10px;
-            padding: 10px 20px;
             left: 0;
             bottom: 0;
         }
@@ -152,7 +151,7 @@
 
 <body>
     <div id="reader">
-        {{range .}}
+        {{range .Peras}}
         <div class="pera">
             {{range .}}
             <span class="word {{if not .Entries}}nf{{end}}" onclick='showWord("{{.Word}}",
@@ -180,15 +179,52 @@
 
     <script>
         document.addEventListener('keydown', (e) => {
-            if (e.code === "Escape") {
-                if (document.activeElement === wordResInpt)
+            if (document.activeElement === wordResInpt) {
+                if (e.code === "Escape")
                     wordResInpt.blur();
                 else
                     closeWordTbl();
+                return;
             }
+
+            // no composite key
+            if (/*e.shiftKey ||*/ e.ctrlKey) {
+                return;
+            }
+
+            const input = wordResInpt;
+            switch (e.code) {
+                case "KeyE":
+                    e.preventDefault();
+                    closeWordTbl();
+
+                case "KeyS":
+                    e.preventDefault();
+                    input.focus();
+                    input.setSelectionRange(input.value.length, input.value.length);
+                    break;
+                case "KeyI":
+                    e.preventDefault();
+                    input.focus();
+                    input.select();
+                    break;
+                case "Equal":
+                    e.preventDefault();
+                    fontSizeInc();
+                    console.log("?")
+                    break;
+
+                case "Minus":
+                    e.preventDefault();
+                    fontSizeDec();
+                    break;
+
+            }
+
         })
 
         function closeWordTbl() {
+            if (wordTbl.classList.contains('hidden')) return;
             wordTbl.classList.add('hidden');
             document.body.style.overflow = 'auto';
 
@@ -220,15 +256,19 @@
 
 
         const fontDiffCVal = 2.0;
-        plus.addEventListener("click", () => {
+
+        function fontSizeInc() {
             const s = parseFloat(window.getComputedStyle(document.body, null).getPropertyValue("font-size"))
             document.body.style.fontSize = `${s + fontDiffCVal}px`;
-        })
+        }
 
-        minus.addEventListener("click", () => {
+        function fontSizeDec() {
             const s = parseFloat(window.getComputedStyle(document.body, null).getPropertyValue("font-size"))
             document.body.style.fontSize = `${s - fontDiffCVal}px`;
-        })
+        }
+
+        plus.addEventListener("click", fontSizeInc)
+        minus.addEventListener("click", fontSizeDec)
     </script>
 </body>
 
