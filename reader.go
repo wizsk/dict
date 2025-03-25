@@ -29,7 +29,7 @@ var (
 )
 
 type ReaderData struct {
-	Name string
+	Name  string
 	Peras [][]ReaderWord
 }
 
@@ -73,6 +73,9 @@ func loadHistFromFile() {
 }
 
 func (rh *ReaderHist) saveToFile() {
+	if debug {
+		return
+	}
 	data, err := json.Marshal(rh)
 	if err != nil {
 		fmt.Println("WARN: could not make json:", err)
@@ -166,6 +169,10 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	w.Write(buf.Bytes())
+
+	if r.FormValue("save") != "on" {
+		return
+	}
 
 	// save stuff in a seperate routine
 	go func() {

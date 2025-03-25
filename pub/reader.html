@@ -179,8 +179,8 @@
 
     <script>
         document.addEventListener('keydown', (e) => {
-            if (document.activeElement === wordResInpt) {
-                if (e.code === "Escape")
+            if (e.code === "Escape") {
+                if (document.activeElement === wordResInpt)
                     wordResInpt.blur();
                 else
                     closeWordTbl();

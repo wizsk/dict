@@ -1,9 +1,9 @@
 {{if .Entries}}
 <table>
     <thead>
-        <td class="w-4">Word</td>
-        <td class="w-def">Def</td>
-        <td class="w-4">Root</td>
+        <td class="w-4">كلمة</td>
+        <td class="w-def">تعريف</td>
+        <td class="w-4">جذر</td>
     </thead>
     {{range .Entries}}
     <tr class="padd">
@@ -14,7 +14,5 @@
     {{end}}
 </table>
 {{else if .Word}}
-No resusts for: "{{.Word}}"
-{{else}}
-Search for something
+لا توجد نتائج لـ: {{.Word}}
 {{end}}

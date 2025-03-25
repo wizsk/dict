@@ -87,12 +87,16 @@
     <form action="/rd" method="post" id="form">
         <textarea name="txt" id="txt" autofocus rows="8" cols="25"></textarea>
         <div>
-            <button id="submit" type="submit">Go</button>
-            <button onclick="txt.value = ''" type="button">Clear</button>
+            <input type="checkbox" name="save" id="save">
+            <label for="save">حفظ إلى السجل</label>
+        </div>
+        <div>
+            <button id="submit" type="submit">اذهب</button>
+            <button onclick="txt.value = ''" type="button">مسح</button>
         </div>
     </form>
 
-    <a href="/" id="goToDict">Open Dictionary</a>
+    <a href="/" id="goToDict">انتقل إلى وضع القارئ</a>
 
     {{if .}}
     <main id="hist">
