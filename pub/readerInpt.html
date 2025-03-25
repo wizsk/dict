@@ -102,7 +102,6 @@
 
     <script>
         document.addEventListener('keydown', (e) => {
-            console.log(e.code);
             if ((e.ctrlKey || e.shiftKey) && e.code == "Enter") {
                 e.preventDefault();
                 form.submit.click();
