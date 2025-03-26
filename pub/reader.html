@@ -88,12 +88,11 @@
             width: 100%;
             background: whitesmoke;
             overflow: scroll;
-
         }
 
         #wordTbl_div {
             margin: 1rem 0.4rem;
-            margin-bottom: 3rem;
+            margin-bottom: 5rem;
             display: flex;
             align-items: center;
             flex-direction: column;
@@ -188,7 +187,7 @@
             }
 
             // no composite key
-            if (/*e.shiftKey ||*/ e.ctrlKey) {
+            if (/*e.shiftKey ||*/ e.ctrlKey || document.activeElement === wordResInpt) {
                 return;
             }
 
