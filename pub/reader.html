@@ -19,10 +19,24 @@
             font-family: 'font';
         }
 
+
         body {
-            --background: whitesmoke;
             font-size: 1.2rem;
-            background: var(--background);
+            color: var(--text);
+            background: var(--base);
+            transition: all ease 0.2s;
+        }
+
+        .latte {
+            --base: #eff1f5;
+            --text: #3a3c4e;
+            --text-nf: #d20f39;
+        }
+
+        .mocha {
+            --base: #1e1e2e;
+            --text: #cdd6f4;
+            --text-nf: #f38ba8;
         }
 
         #reader {
@@ -43,7 +57,7 @@
 
         /* not found */
         .nf {
-            color: red;
+            color: var(--text-nf);
         }
 
         .word {
@@ -72,11 +86,12 @@
 
         #plus,
         #minus,
-        #wordTblCloseBtn {
+        #wordTblCloseBtn,
+        #color {
             color: white;
             padding: 15px 25px;
             border-radius: 1rem;
-            background: rgb(3, 27, 48);
+            background: rgb(0, 80, 150);
             border: none;
         }
 
@@ -86,7 +101,7 @@
             left: 0;
             height: 100%;
             width: 100%;
-            background: whitesmoke;
+            background: var(--base);
             overflow: scroll;
         }
 
@@ -135,20 +150,20 @@
 
         table thead,
         tr:nth-child(even) {
-            background-color: #c1d3ee48;
+            background-color: #c0d9ff3a;
         }
 
         /* Styles for medium-sized screens */
         @media (min-width: 768px) {
             body {
-                font-size: 1.4rem;
+                font-size: 24px;
             }
         }
     </style>
 
 </head>
 
-<body>
+<body class="latte">
     <div id="reader">
         {{range .Peras}}
         <div class="pera">
@@ -168,10 +183,11 @@
             <main id="wordResTbl">
             </main>
         </div>
-        <button id="wordTblCloseBtn" onclick="closeWordTbl()">Close</button>
+        <button id="wordTblCloseBtn" onclick="window.history.back();">Close</button>
     </div>
 
     <div id="font-size">
+        <button id="color">LA</button>
         <button id="plus">A+</button>
         <button id="minus">A-</button>
     </div>
@@ -182,7 +198,7 @@
                 if (document.activeElement === wordResInpt)
                     wordResInpt.blur();
                 else
-                    closeWordTbl();
+                    window.history.back();
                 return;
             }
 
@@ -195,7 +211,9 @@
             switch (e.code) {
                 case "KeyE":
                     e.preventDefault();
-                    closeWordTbl();
+                    // closeWordTbl();
+                    window.history.back();
+                    break;
 
                 case "KeyS":
                     e.preventDefault();
@@ -207,25 +225,50 @@
                     input.focus();
                     input.select();
                     break;
+
                 case "Equal":
                     e.preventDefault();
                     fontSizeInc();
                     break;
-
                 case "Minus":
                     e.preventDefault();
                     fontSizeDec();
+                    break;
+
+                case "KeyT":
+                    e.preventDefault();
+                    changeColor();
                     break;
 
             }
 
         })
 
+        // latte, motcha
+        const colorClasses = [
+            'latte',
+            'mocha'
+        ];
+
+        function changeColor() {
+            for (let i = 0; i < colorClasses.length; i++) {
+                const c = colorClasses[i]; // current
+                if (document.body.classList.contains(c)) {
+                    const n = colorClasses[i + 1 < colorClasses.length ? i + 1 : 0]; // next
+                    document.body.classList.remove(c);
+                    document.body.classList.add(n);
+                    color.innerText = n.toUpperCase().slice(0, 2);
+                    break;
+                }
+            }
+        }
+
+        color.onclick = changeColor;
+
         function closeWordTbl() {
             if (wordTbl.classList.contains('hidden')) return;
             wordTbl.classList.add('hidden');
             document.body.style.overflow = 'auto';
-
         }
 
         function showWord(word, tabl) {
@@ -234,7 +277,15 @@
 
             wordTbl.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
+
+            history.pushState({}, "", `/rd?def=${word}`)
         }
+
+        // Handle browser back/forward
+        window.addEventListener("popstate", (e) => {
+            closeWordTbl();
+        });
+
 
         let searhInvId;
         const res = wordResTbl;
