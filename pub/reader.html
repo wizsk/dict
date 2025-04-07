@@ -197,7 +197,7 @@
             if (e.code === "Escape") {
                 if (document.activeElement === wordResInpt)
                     wordResInpt.blur();
-                else
+                else if (!wordTbl.classList.contains('hidden'))
                     window.history.back();
                 return;
             }
@@ -212,7 +212,8 @@
                 case "KeyE":
                     e.preventDefault();
                     // closeWordTbl();
-                    window.history.back();
+                    if (!wordTbl.classList.contains('hidden'))
+                        window.history.back();
                     break;
 
                 case "KeyS":
