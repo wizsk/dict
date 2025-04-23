@@ -64,9 +64,9 @@ func main() {
 	http.Handle("/pub/", http.FileServerFS(staticData))
 
 	p := ":" + findFreePort()
-	fmt.Println(os.Args[0] + ": serving at: http://" + localIp() + p)
+	if lp := localIp(); lp != "localhost" {
+		fmt.Println(os.Args[0] + ": serving at: http://" + lp + p)
+	}
 	fmt.Println(os.Args[0] + ": serving at: http://localhost" + p)
-	fmt.Println(os.Args[0] + ": reader at: http://" + localIp() + p + "/rd")
-	fmt.Println(os.Args[0] + ": reader at: http://localhost" + p + "/rd")
 	panic(http.ListenAndServe(p, nil))
 }

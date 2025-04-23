@@ -24,7 +24,13 @@
             font-size: 1.2rem;
             color: var(--text);
             background: var(--base);
-            transition: all ease 0.2s;
+        }
+
+        /* from quran.com */
+        .speia {
+            --base: #f8ebd5;
+            --text: #010101;
+            --text-nf: #d20f39;
         }
 
         .latte {
@@ -52,6 +58,7 @@
         }
 
         .pera {
+            text-indent: 6%;
             margin-bottom: 1.3rem;
         }
 
@@ -156,20 +163,20 @@
         /* Styles for medium-sized screens */
         @media (min-width: 768px) {
             body {
-                font-size: 24px;
+                font-size: 28px;
             }
         }
     </style>
 
 </head>
 
-<body class="latte">
+<body class="speia">
     <div id="reader">
         {{range .Peras}}
         <div class="pera">
             {{range .}}
-            <span class="word {{if not .Entries}}nf{{end}}" onclick='showWord("{{.Word}}",
-            `{{template "res.html" .}}`)'>
+            <span {{if .AW}} class="word {{if not .Entries}}nf{{end}}" onclick='showWord("{{.Word}}",
+            `{{template "res.html" .}}`)' {{end}}>
                 {{.Word}}
             </span>
             {{end}}
@@ -247,8 +254,9 @@
 
         // latte, motcha
         const colorClasses = [
+            'speia',
+            'mocha',
             'latte',
-            'mocha'
         ];
 
         function changeColor() {

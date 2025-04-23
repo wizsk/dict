@@ -34,6 +34,7 @@ type ReaderData struct {
 }
 
 type ReaderWord struct {
+	AW      bool // Not arabic word
 	Word    string
 	Entries []dict.Entry
 }
@@ -157,7 +158,8 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 		for _, w := range strings.Split(l, " ") {
 			if w != "" {
 				wr := s.d.FindWord(w)
-				cp = append(cp, ReaderWord{w, wr})
+				n := dict.ContainsArabic(w)
+				cp = append(cp, ReaderWord{n, w, wr})
 			}
 		}
 		reader = append(reader, cp)
