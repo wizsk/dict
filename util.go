@@ -5,7 +5,9 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
+	"time"
 )
 
 func p[T any](r T, e error) T {
@@ -52,4 +54,42 @@ func localIp() string {
 		}
 	}
 	return "localhost"
+}
+
+type FileInfo struct {
+	Name    string
+	ModTime time.Time
+}
+
+func readDirByNewest(dir string) []FileInfo {
+	if dir == "" {
+		return nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+
+	var files []FileInfo
+
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		files = append(files, FileInfo{
+			Name:    e.Name(),
+			ModTime: info.ModTime(),
+		})
+	}
+
+	// sort newest first
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime.After(files[j].ModTime)
+	})
+
+	return files
 }

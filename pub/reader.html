@@ -287,7 +287,7 @@
             wordTbl.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
 
-            history.pushState({}, "", `/rd?def=${word}`)
+            history.pushState({}, "", window.location.href)
         }
 
         // Handle browser back/forward

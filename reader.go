@@ -67,9 +67,9 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 		h := strings.TrimPrefix(r.URL.EscapedPath(), "/rd/")
 		if h == "" {
 			var s strings.Builder
-			var dir []os.DirEntry
+			var dir []FileInfo
 			if readerHistDir != "" {
-				dir, _ = os.ReadDir(readerHistDir)
+				dir = readDirByNewest(readerHistDir)
 			}
 			if len(dir) > 0 {
 				s.WriteString(
@@ -77,32 +77,38 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 				)
 			}
 			for _, d := range dir {
-				name := strings.SplitN(d.Name(), "__", 2)[1]
-				name, err := url.PathUnescape(name)
+				p := strings.SplitN(d.Name, "__", 2)
+				if len(p) != 2 {
+					continue
+				}
+				name, err := url.PathUnescape(p[1])
 				if err != nil {
 					name = "؟؟؟؟؟"
 				}
 				a := fmt.Sprintf(
 					`<a class="hist-item" href="/rd/%s?perm=true">- %s</a>`,
-					d.Name(),
+					d.Name,
 					html.EscapeString(name))
 				s.WriteString(a)
 			}
-			dir, _ = os.ReadDir(readerTmpDir)
+			dir = readDirByNewest(readerTmpDir)
 			if len(dir) > 0 {
 				s.WriteString(
 					"<div>الملفات المؤقتة</div>",
 				)
 			}
 			for _, d := range dir {
-				name := strings.SplitN(d.Name(), "__", 2)[1]
-				name, err := url.PathUnescape(name)
+				p := strings.SplitN(d.Name, "__", 2)
+				if len(p) != 2 {
+					continue
+				}
+				name, err := url.PathUnescape(p[1])
 				if err != nil {
 					name = "؟؟؟؟؟"
 				}
 				a := fmt.Sprintf(
 					`<a class="hist-item" href="/rd/%s">- %s</a>`,
-					d.Name(),
+					d.Name,
 					html.EscapeString(name))
 				s.WriteString(a)
 			}
@@ -122,7 +128,6 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		dirs, _ := os.ReadDir(d)
 		for _, dir := range dirs {
-			fmt.Println(dir.Name() == h, dir.Name(), h)
 			if dir.Name() == h {
 				f, err := os.Open(filepath.Join(d, dir.Name()))
 				if err != nil {
@@ -151,14 +156,8 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// 1st line && found arabic line
 		if f {
-			if pageName == "" {
-				pageName = l
-			}
-
-			if dict.ContainsArabic(l) {
-				f = false
-				pageName = l
-			}
+			pageName = l
+			f = !f
 		}
 		for _, w := range strings.Split(l, " ") {
 			if w != "" {
@@ -175,26 +174,29 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 	if err := t.ExecuteTemplate(data, "reader.html", &readerData); debug && err != nil {
 		panic(err)
 	}
-	buf := bytes.NewReader(data.Bytes())
-	io.Copy(w, buf)
 
 	isSave := r.FormValue("save") == "on"
-	go func() {
-		d := readerTmpDir
-		if isSave && readerHistDir != "" {
-			d = readerHistDir
-		}
-		sha := fmt.Sprintf("%x", sha256.Sum256([]byte(txt)))
-		name := url.PathEscape(pageName)
-		f := filepath.Join(d, sha+"__"+name)
-		file, err := os.Create(f)
-		if err != nil {
-			fmt.Printf("WARN: err: %v\n", err)
-			return
-		}
-		defer file.Close()
-		buf.Seek(0, io.SeekStart)
-		i, _ := io.Copy(file, buf)
-		fmt.Printf("INFO: saved %d: %q\n", i, f)
-	}()
+	d := readerTmpDir
+	if isSave && readerHistDir != "" {
+		d = readerHistDir
+	}
+	sha := fmt.Sprintf("%x", sha256.Sum256([]byte(txt)))
+	name := url.PathEscape(pageName)
+	fileName := sha + "__" + name
+	f := filepath.Join(d, fileName)
+	file, err := os.Create(f)
+	if err != nil {
+		http.Error(w, "sorry something went wrong! 737363829", http.StatusInternalServerError)
+		fmt.Printf("WARN: err: %v\n", err)
+		return
+	}
+	defer file.Close()
+	i, _ := io.Copy(file, data)
+	_ = i
+	// fmt.Printf("INFO: saved %d: %q\n", i, f)
+	l := "/rd/" + fileName
+	if isSave {
+		l += "?perm=true"
+	}
+	http.Redirect(w, r, l, http.StatusMovedPermanently)
 }
