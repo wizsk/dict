@@ -4,26 +4,43 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"html"
 	"html/template"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/wizsk/dict/dict"
 )
 
 var (
-	readerHist     ReaderHist
-	readerHistFile = func() string {
-		const n = ".dict_history.json"
+	readerHistDir = func() string {
+		n := ""
 		if h, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(h, n)
+			n = filepath.Join(h, ".dict_history")
+		} else {
+			n = "dict_history"
 		}
+		if _, err := os.Stat(n); err != nil {
+			if err = os.Mkdir(n, 0700); err != nil && !os.IsExist(err) {
+				return ""
+			}
+		}
+		fmt.Printf("INFO: Permanent hist dir: %q\n", n)
+		return n
+	}()
+	readerTmpDir = func() string {
+		n := filepath.Join(os.TempDir(), "dict_history")
+		if _, err := os.Stat(n); err != nil {
+			if err = os.Mkdir(n, 0700); err != nil && !os.IsExist(err) {
+				return ""
+			}
+		}
+		fmt.Printf("INFO: Temporary hist dir: %q\n", n)
 		return n
 	}()
 )
@@ -39,62 +56,6 @@ type ReaderWord struct {
 	Entries []dict.Entry
 }
 
-// this is used to store the history in file and mannge it.
-// It actually saves the generated html page
-type ReaderHist struct {
-	Hist       [10]ReaderHistItem
-	Start, Len int
-	mtx        sync.RWMutex
-}
-
-type ReaderHistItem struct {
-	Sha256 string
-	Name   string
-	Data   []byte
-}
-
-func loadHistFromFile() {
-	if debug {
-		fmt.Println("INFO: NO loading hist in debeg mode!")
-		return
-	}
-	data, err := os.ReadFile(readerHistFile)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			fmt.Println("WARN: could not read:", readerHistFile, "reason:", err)
-		}
-		return
-	}
-
-	if err = json.Unmarshal(data, &readerHist); err != nil {
-		fmt.Println("WARN: could not parse json:", err)
-		return
-	}
-	fmt.Println("INFO: loaded history form:", readerHistFile)
-}
-
-func (rh *ReaderHist) saveToFile() {
-	if debug {
-		return
-	}
-	data, err := json.Marshal(rh)
-	if err != nil {
-		fmt.Println("WARN: could not make json:", err)
-		return
-	}
-
-	f, err := os.Create(readerHistFile)
-	if err != nil {
-		fmt.Println("WARN: could not create:", readerHistFile, "reason:", err)
-		return
-	}
-	defer f.Close()
-	if _, err = f.Write(data); err != nil {
-		fmt.Println("WARN: could not write to:", readerHistFile, "reason:", err)
-		return
-	}
-}
-
 func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 	t := s.t
 	if debug {
@@ -103,34 +64,78 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 
 	txt := strings.TrimSpace(r.FormValue("txt"))
 	if txt == "" {
-		readerHist.mtx.RLock()
-		defer readerHist.mtx.RUnlock()
-
-		sha := strings.TrimSpace(r.FormValue("hist"))
-		if sha == "" {
+		h := strings.TrimPrefix(r.URL.EscapedPath(), "/rd/")
+		if h == "" {
 			var s strings.Builder
-			for i := 0; i < readerHist.Len; i++ {
-				idx := readerHist.Start + i
-				idx %= len(readerHist.Hist)
-				a := fmt.Sprintf(`<a class="hist-item" href="/rd?hist=%s">- %s</a>`,
-					readerHist.Hist[idx].Sha256, html.EscapeString(readerHist.Hist[idx].Name))
+			var dir []os.DirEntry
+			if readerHistDir != "" {
+				dir, _ = os.ReadDir(readerHistDir)
+			}
+			if len(dir) > 0 {
+				s.WriteString(
+					"<div>الملفات الدائمة</div>",
+				)
+			}
+			for _, d := range dir {
+				name := strings.SplitN(d.Name(), "__", 2)[1]
+				name, err := url.PathUnescape(name)
+				if err != nil {
+					name = "؟؟؟؟؟"
+				}
+				a := fmt.Sprintf(
+					`<a class="hist-item" href="/rd/%s?perm=true">- %s</a>`,
+					d.Name(),
+					html.EscapeString(name))
+				s.WriteString(a)
+			}
+			dir, _ = os.ReadDir(readerTmpDir)
+			if len(dir) > 0 {
+				s.WriteString(
+					"<div>الملفات المؤقتة</div>",
+				)
+			}
+			for _, d := range dir {
+				name := strings.SplitN(d.Name(), "__", 2)[1]
+				name, err := url.PathUnescape(name)
+				if err != nil {
+					name = "؟؟؟؟؟"
+				}
+				a := fmt.Sprintf(
+					`<a class="hist-item" href="/rd/%s">- %s</a>`,
+					d.Name(),
+					html.EscapeString(name))
 				s.WriteString(a)
 			}
 			if err := t.ExecuteTemplate(w, "readerInpt.html",
 				template.HTML(s.String())); debug && err != nil {
 				panic(err)
 			}
-		} else {
-			for i := 0; i < readerHist.Len; i++ {
-				idx := readerHist.Start + i
-				idx %= len(readerHist.Hist)
-				if sha == readerHist.Hist[i].Sha256 {
-					w.Write(readerHist.Hist[idx].Data)
+			return
+		}
+		d := readerTmpDir
+		if r.FormValue("perm") == "true" {
+			d = readerHistDir
+		}
+		if d == "" {
+			http.Redirect(w, r, "/rd/", http.StatusMovedPermanently)
+			return
+		}
+		dirs, _ := os.ReadDir(d)
+		for _, dir := range dirs {
+			fmt.Println(dir.Name() == h, dir.Name(), h)
+			if dir.Name() == h {
+				f, err := os.Open(filepath.Join(d, dir.Name()))
+				if err != nil {
+					http.Redirect(w, r, "/rd/", http.StatusMovedPermanently)
 					return
 				}
+				defer f.Close()
+				io.Copy(w, f)
+				return
 			}
-			http.Redirect(w, r, "/rd", http.StatusMovedPermanently)
 		}
+
+		http.Redirect(w, r, "/rd/", http.StatusMovedPermanently)
 		return
 	}
 
@@ -166,38 +171,30 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	readerData := ReaderData{pageName, reader}
-	buf := new(bytes.Buffer)
-	if err := t.ExecuteTemplate(buf, "reader.html", &readerData); debug && err != nil {
+	data := new(bytes.Buffer)
+	if err := t.ExecuteTemplate(data, "reader.html", &readerData); debug && err != nil {
 		panic(err)
 	}
-	w.Write(buf.Bytes())
+	buf := bytes.NewReader(data.Bytes())
+	io.Copy(w, buf)
 
-	if r.FormValue("save") != "on" {
-		return
-	}
-
-	// save stuff in a seperate routine
+	isSave := r.FormValue("save") == "on"
 	go func() {
-		// thread safe code from here
-		readerHist.mtx.Lock()
-		defer readerHist.mtx.Unlock()
-
-		sha := fmt.Sprintf("%x", sha256.Sum256(buf.Bytes()))
-		for i := 0; i < len(readerHist.Hist); i++ {
-			if sha == readerHist.Hist[i].Sha256 {
-				return
-			}
+		d := readerTmpDir
+		if isSave && readerHistDir != "" {
+			d = readerHistDir
 		}
-
-		// wraping time. the hist is full..
-		if readerHist.Len >= len(readerHist.Hist) {
-			// the item wich was inserted first will be rewritten
-			readerHist.Start = (readerHist.Start + 1) % len(readerHist.Hist)
-			readerHist.Len--
+		sha := fmt.Sprintf("%x", sha256.Sum256([]byte(txt)))
+		name := url.PathEscape(pageName)
+		f := filepath.Join(d, sha+"__"+name)
+		file, err := os.Create(f)
+		if err != nil {
+			fmt.Printf("WARN: err: %v\n", err)
+			return
 		}
-		idx := (readerHist.Start + readerHist.Len) % len(readerHist.Hist)
-		readerHist.Hist[idx] = ReaderHistItem{sha, pageName, buf.Bytes()}
-		readerHist.Len++
-		readerHist.saveToFile()
+		defer file.Close()
+		buf.Seek(0, io.SeekStart)
+		i, _ := io.Copy(file, buf)
+		fmt.Printf("INFO: saved %d: %q\n", i, f)
 	}()
 }

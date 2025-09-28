@@ -35,7 +35,6 @@ func main() {
 	dict := dict.MakeData()
 	tmpl := p(template.ParseFS(staticData, "pub/*.html"))
 	sv := server{dict, tmpl}
-	loadHistFromFile()
 
 	// word res
 	http.HandleFunc("/wr", func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +59,7 @@ func main() {
 		}
 	})
 
-	http.HandleFunc("/rd", sv.readerHandler)
+	http.HandleFunc("/rd/", sv.readerHandler)
 	http.Handle("/pub/", http.FileServerFS(staticData))
 
 	p := ":" + findFreePort()
