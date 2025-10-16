@@ -11,7 +11,7 @@ import (
 	"github.com/wizsk/dict/dict"
 )
 
-const debug = !true
+const debug = true
 
 var (
 	//go:embed pub/*
