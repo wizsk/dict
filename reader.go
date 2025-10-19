@@ -5,19 +5,24 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"html"
 	"html/template"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/wizsk/dict/dict"
 )
 
+const (
+	pageNameMaxLen  = 250
+	entriesFileName = "entries"
+)
+
 var (
+	entriesMtx    = sync.RWMutex{}
 	readerHistDir = func() string {
 		n := ""
 		if h, err := os.UserHomeDir(); err == nil {
@@ -64,60 +69,24 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 
 	txt := strings.TrimSpace(r.FormValue("txt"))
 	if txt == "" {
-		h := strings.TrimPrefix(r.URL.EscapedPath(), "/rd/")
+		entriesMtx.RLock()
+		defer entriesMtx.RUnlock()
+
+		h := strings.TrimPrefix(r.URL.Path, "/rd/")
 		if h == "" {
 			var s strings.Builder
-			var dir []FileInfo
-			if readerHistDir != "" {
-				dir = readDirByNewest(readerHistDir)
-			}
-			if len(dir) > 0 {
-				s.WriteString(
-					"<div>الملفات الدائمة</div>",
-				)
-			}
-			for _, d := range dir {
-				p := strings.SplitN(d.Name, "__", 2)
-				if len(p) != 2 {
-					continue
-				}
-				name, err := url.PathUnescape(p[1])
-				if err != nil {
-					name = "؟؟؟؟؟"
-				}
-				a := fmt.Sprintf(
-					`<a class="hist-item" href="/rd/%s?perm=true">- %s</a>`,
-					d.Name,
-					html.EscapeString(name))
-				s.WriteString(a)
-			}
-			dir = readDirByNewest(readerTmpDir)
-			if len(dir) > 0 {
-				s.WriteString(
-					"<div>الملفات المؤقتة</div>",
-				)
-			}
-			for _, d := range dir {
-				p := strings.SplitN(d.Name, "__", 2)
-				if len(p) != 2 {
-					continue
-				}
-				name, err := url.PathUnescape(p[1])
-				if err != nil {
-					name = "؟؟؟؟؟"
-				}
-				a := fmt.Sprintf(
-					`<a class="hist-item" href="/rd/%s">- %s</a>`,
-					d.Name,
-					html.EscapeString(name))
-				s.WriteString(a)
-			}
+			writeEntieslist(&s,
+				"<div>الملفات الدائمة</div>",
+				readerHistDir, "?perm=true")
+			writeEntieslist(&s,
+				"<div>الملفات المؤقتة</div>",
+				readerTmpDir, "")
 			if err := t.ExecuteTemplate(w, "readerInpt.html",
 				template.HTML(s.String())); debug && err != nil {
-				panic(err)
 			}
 			return
 		}
+
 		d := readerTmpDir
 		if r.FormValue("perm") == "true" {
 			d = readerHistDir
@@ -126,6 +95,7 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/rd/", http.StatusMovedPermanently)
 			return
 		}
+
 		dirs, _ := os.ReadDir(d)
 		for _, dir := range dirs {
 			if dir.Name() == h {
@@ -156,7 +126,7 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// 1st line && found arabic line
 		if f {
-			pageName = l
+			pageName = l[:pageNameMaxLen]
 			f = !f
 		}
 		for _, w := range strings.Split(l, " ") {
@@ -180,21 +150,80 @@ func (s *server) readerHandler(w http.ResponseWriter, r *http.Request) {
 	if isSave && readerHistDir != "" {
 		d = readerHistDir
 	}
-	sha := fmt.Sprintf("%x", sha256.Sum256([]byte(txt)))
-	name := url.PathEscape(pageName)
-	fileName := sha + "__" + name
-	f := filepath.Join(d, fileName)
+	shaBytes := sha256.Sum256([]byte(txt))
+	sha := fmt.Sprintf("%x", shaBytes)
+
+	entriesFilePath := filepath.Join(d, entriesFileName)
+	entriesMtx.Lock()
+	defer entriesMtx.Unlock()
+
+	if _, err := os.Stat(d); err != nil && os.IsNotExist(err) {
+		if err = os.Mkdir(d, 0700); err != nil {
+			http.Error(w,
+				"sorry something went wrong: "+err.Error(),
+				http.StatusInternalServerError)
+			fmt.Printf("WARN: err: %v\n", err)
+			return
+		}
+	}
+
+	entriesFile, err := os.Open(entriesFilePath)
+	modifyEntries := true
+	entriesDataLen := 0
+	if err != nil && !os.IsNotExist(err) {
+		http.Error(w, "sorry something went wrong! 1", http.StatusInternalServerError)
+		fmt.Printf("WARN: err: %v\n", err)
+		return
+	} else if !os.IsNotExist(err) {
+		entriesData, err := io.ReadAll(entriesFile)
+		if err != nil {
+			http.Error(w, "sorry something went wrong! 3", http.StatusInternalServerError)
+			fmt.Printf("WARN: err: %v\n", err)
+			return
+		}
+		entriesFile.Close()
+		entriesDataLen = len(entriesData)
+
+		pairs := bytes.Split(entriesData, []byte{'\n'})
+		for _, p := range pairs {
+			i := bytes.IndexByte(p, ':')
+			if i < 0 {
+				continue // bad
+			}
+			if bytes.Equal([]byte(sha), p[:i]) {
+				modifyEntries = false
+				break
+			}
+		}
+	}
+	if modifyEntries {
+		entries, err := os.OpenFile(entriesFilePath,
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			http.Error(w, "sorry something went wrong! 3", http.StatusInternalServerError)
+			fmt.Printf("WARN: err: %v\n", err)
+			return
+		}
+		if entriesDataLen > 0 {
+			entries.Write([]byte{'\n'})
+		}
+		entries.WriteString(sha)
+		entries.Write([]byte{':'})
+		entries.Write([]byte(pageName))
+		entries.Close()
+	}
+
+	f := filepath.Join(d, sha)
 	file, err := os.Create(f)
 	if err != nil {
-		http.Error(w, "sorry something went wrong! 737363829", http.StatusInternalServerError)
+		http.Error(w, "sorry something went wrong! 2", http.StatusInternalServerError)
 		fmt.Printf("WARN: err: %v\n", err)
 		return
 	}
-	defer file.Close()
-	i, _ := io.Copy(file, data)
-	_ = i
-	// fmt.Printf("INFO: saved %d: %q\n", i, f)
-	l := "/rd/" + fileName
+	io.Copy(file, data)
+	file.Close()
+
+	l := "/rd/" + sha
 	if isSave {
 		l += "?perm=true"
 	}
